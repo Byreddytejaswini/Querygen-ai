@@ -57,6 +57,24 @@ header p {
   background: #535bf2;
 }
 
+.input-section button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.error-section {
+  background: #fee;
+  border: 2px solid #fcc;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.error-section p {
+  color: #c33;
+  margin: 0;
+}
+
 .output-section {
   background: #1a1a1a;
   padding: 20px;
@@ -72,4 +90,7 @@ header p {
   color: #4ade80;
   font-size: 18px;
   font-family: 'Courier New', monospace;
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
