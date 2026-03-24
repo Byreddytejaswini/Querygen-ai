@@ -69,12 +69,15 @@ app.post('/api/generate-sql', protect, async (req, res) => {
     });
 
     res.json({
-      success: true,
-      naturalLanguageQuery: query,
-      generatedSQL: generatedSQL,
-      modelUsed: aiResponse.data.model_used,
-      timestamp: new Date().toISOString()
-    });
+  success: true,
+  naturalLanguageQuery: query,
+  generatedSQL: aiResponse.data.generated_sql,
+  modelUsed: aiResponse.data.model_used,
+  keywords: aiResponse.data.keywords,
+  similarQueries: aiResponse.data.similar_queries,
+  queryResults: aiResponse.data.query_results,
+  timestamp: new Date().toISOString()
+});
 
   } catch (error) {
     console.error('❌ Error:', error.message);

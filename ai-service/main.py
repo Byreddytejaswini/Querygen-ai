@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from groq import Groq
 from pinecone import Pinecone
+from database import init_db, execute_sql
 import os
 import re
 import uuid
@@ -24,6 +25,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Init DB
+init_db()
+
 # Clients
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
@@ -44,6 +48,7 @@ class QueryResponse(BaseModel):
     model_used: str
     keywords: list
     similar_queries: list
+    query_results: dict
 
 # ─── Keyword Extractor ────────────────────────────────────
 def extract_keywords(query: str) -> list:
@@ -112,7 +117,7 @@ def find_similar_queries(query: str) -> list:
         print(f"🔍 Raw scores: {[(m.score, m.metadata.get('natural_query','')) for m in results.matches]}")
         similar = []
         for match in results.matches:
-            if match.score > 0.5:  # lowered threshold
+            if match.score > 0.5:
                 similar.append({
                     "query": match.metadata.get("natural_query", ""),
                     "sql":   match.metadata.get("sql", ""),
@@ -122,6 +127,7 @@ def find_similar_queries(query: str) -> list:
     except Exception as e:
         print(f"⚠️ Pinecone search error: {e}")
         return []
+
 # ─── Routes ───────────────────────────────────────────────
 @app.get("/")
 def read_root():
@@ -214,13 +220,18 @@ SQL Query:"""
         # Step 6: Store in Pinecone
         store_query_in_pinecone(request.query, generated_sql)
 
+        # Step 7: Execute SQL against SQLite
+        sql_results = execute_sql(generated_sql)
+        print(f"📊 Results: {sql_results.get('count', 0)} rows")
+
         return QueryResponse(
             success=True,
             natural_language_query=request.query,
             generated_sql=generated_sql,
             model_used="llama-3.3-70b-versatile",
             keywords=keywords,
-            similar_queries=similar_queries
+            similar_queries=similar_queries,
+            query_results=sql_results
         )
 
     except Exception as e:

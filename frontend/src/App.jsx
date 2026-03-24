@@ -230,7 +230,40 @@ function MainApp({ user, onLogout }) {
                 {copied ? '✓ Copied' : 'Copy'}
               </button>
             </div>
-            <pre className="sql-output">{result.generatedSQL}</pre>
+            <pre className="sql-output">
+              {result.queryResults && result.queryResults.count > 0 && (
+  <div className="meta-row">
+    <span className="meta-label">📊 Results — {result.queryResults.count} rows</span>
+    <div className="results-table-wrap">
+      <table className="results-table">
+        <thead>
+          <tr>
+            {result.queryResults.columns.map((col) => (
+              <th key={col}>{col}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {result.queryResults.rows.map((row, i) => (
+            <tr key={i}>
+              {result.queryResults.columns.map((col) => (
+                <td key={col}>{row[col]}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
+
+{result.queryResults?.error && (
+  <div className="meta-row">
+    <span className="meta-label" style={{color: 'var(--error)'}}>⚠ SQL Error</span>
+    <p style={{color: 'var(--error)', fontSize: '13px'}}>{result.queryResults.error}</p>
+  </div>
+)}
+{result.generatedSQL}</pre>
 
             {result.keywords?.length > 0 && (
               <div className="meta-row">
