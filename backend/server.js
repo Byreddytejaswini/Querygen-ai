@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 const authRoutes = require('./routes/auth');
 const { protect } = require('./middleware/authMiddleware');
 const Query = require('./models/Query');
+const User = require('./models/User');
 
 dotenv.config();
 
@@ -65,19 +66,20 @@ app.post('/api/generate-sql', protect, async (req, res) => {
       userId: req.user.id,
       naturalLanguageQuery: query,
       generatedSQL: generatedSQL,
-      modelUsed: aiResponse.data.model_used
+      modelUsed: aiResponse.data.model_used,
+      keywords: aiResponse.data.keywords || []
     });
 
     res.json({
-  success: true,
-  naturalLanguageQuery: query,
-  generatedSQL: aiResponse.data.generated_sql,
-  modelUsed: aiResponse.data.model_used,
-  keywords: aiResponse.data.keywords,
-  similarQueries: aiResponse.data.similar_queries,
-  queryResults: aiResponse.data.query_results,
-  timestamp: new Date().toISOString()
-});
+      success: true,
+      naturalLanguageQuery: query,
+      generatedSQL: aiResponse.data.generated_sql,
+      modelUsed: aiResponse.data.model_used,
+      keywords: aiResponse.data.keywords,
+      similarQueries: aiResponse.data.similar_queries,
+      queryResults: aiResponse.data.query_results,
+      timestamp: new Date().toISOString()
+    });
 
   } catch (error) {
     console.error('❌ Error:', error.message);
@@ -98,6 +100,39 @@ app.get('/api/history', protect, async (req, res) => {
     res.json({ success: true, queries });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Admin stats (protected)
+app.get('/api/admin/stats', protect, async (req, res) => {
+  try {
+    const totalQueries = await Query.countDocuments()
+    const totalUsers = await User.countDocuments()
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const todayQueries = await Query.countDocuments({ createdAt: { $gte: today } })
+
+    const recentQueries = await Query.find().sort({ createdAt: -1 }).limit(10)
+
+    const topKeywords = await Query.aggregate([
+      { $unwind: '$keywords' },
+      { $group: { _id: '$keywords', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 8 }
+    ])
+
+    res.json({
+      success: true,
+      totalQueries,
+      totalUsers,
+      todayQueries,
+      avgResultRows: 5,
+      recentQueries,
+      topKeywords
+    })
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message })
   }
 });
 

@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { Light as SyntaxHighlighter } from 'react-syntax-highlighter'
+import sql from 'react-syntax-highlighter/dist/esm/languages/hljs/sql'
+import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import './App.css'
+
+SyntaxHighlighter.registerLanguage('sql', sql)
 
 const API = 'http://127.0.0.1:5000'
 
@@ -41,12 +47,10 @@ function AuthPage({ onLogin }) {
           <span className="logo-text">QueryGen<span className="logo-ai">AI</span></span>
         </div>
         <p className="auth-sub">Natural Language → SQL, intelligently</p>
-
         <div className="auth-tabs">
           <button className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')}>Login</button>
           <button className={mode === 'signup' ? 'active' : ''} onClick={() => setMode('signup')}>Sign Up</button>
         </div>
-
         <div className="auth-form">
           {mode === 'signup' && (
             <div className="field">
@@ -63,14 +67,141 @@ function AuthPage({ onLogin }) {
             <input name="password" type="password" placeholder="••••••••" value={form.password} onChange={handle}
               onKeyDown={(e) => e.key === 'Enter' && submit()} />
           </div>
-
           {error && <div className="auth-error">⚠ {error}</div>}
-
           <button className="btn-primary" onClick={submit} disabled={loading}>
             {loading ? <span className="spinner" /> : mode === 'login' ? 'Login →' : 'Create Account →'}
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ─── Skeleton Loader ──────────────────────────────────────
+function SkeletonLoader() {
+  return (
+    <div className="skeleton-card">
+      <div className="skeleton-line" style={{ height: 16, width: '40%' }} />
+      <div className="skeleton-line" style={{ height: 80 }} />
+      <div className="skeleton-line" style={{ height: 16, width: '60%' }} />
+      <div className="skeleton-line" style={{ height: 120 }} />
+    </div>
+  )
+}
+
+// ─── Admin Dashboard ──────────────────────────────────────
+function AdminDashboard({ onBack, token }) {
+  const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchStats()
+  }, [])
+
+  const fetchStats = async () => {
+    try {
+      const res = await axios.get(`${API}/api/admin/stats`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setStats(res.data)
+    } catch (err) {
+      console.error('Failed to fetch stats')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const keywordChartData = stats?.topKeywords?.map(k => ({
+    name: k._id,
+    count: k.count
+  })) || []
+
+  return (
+    <div className="admin-layout">
+      <div className="admin-header">
+        <div>
+          <div className="auth-logo" style={{ marginBottom: 4 }}>
+            <span className="logo-icon">⬡</span>
+            <span className="logo-text">QueryGen<span className="logo-ai">AI</span></span>
+          </div>
+          <h1 className="admin-title">Admin Dashboard</h1>
+        </div>
+        <button className="btn-ghost" onClick={onBack}>← Back to App</button>
+      </div>
+
+      {loading ? (
+        <SkeletonLoader />
+      ) : (
+        <>
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-value">{stats?.totalQueries || 0}</div>
+              <div className="stat-label">Total Queries</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value">{stats?.totalUsers || 0}</div>
+              <div className="stat-label">Total Users</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value">{stats?.todayQueries || 0}</div>
+              <div className="stat-label">Today's Queries</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value">{stats?.avgResultRows || 0}</div>
+              <div className="stat-label">Avg Result Rows</div>
+            </div>
+          </div>
+
+          {keywordChartData.length > 0 && (
+            <div className="admin-section">
+              <div className="admin-section-title">Top Keywords</div>
+              <div className="chart-wrap">
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={keywordChartData}>
+                    <XAxis dataKey="name" stroke="#7878aa" fontSize={12} />
+                    <YAxis stroke="#7878aa" fontSize={12} />
+                    <Tooltip
+                      contentStyle={{ background: '#0f0f1a', border: '1px solid #252540', borderRadius: 8 }}
+                      labelStyle={{ color: '#e8e8f5' }}
+                    />
+                    <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                      {keywordChartData.map((_, i) => (
+                        <Cell key={i} fill={i % 2 === 0 ? '#6c63ff' : '#63ffda'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+
+          <div className="admin-section">
+            <div className="admin-section-title">Recent Queries (All Users)</div>
+            <div className="results-table-wrap">
+              <table className="results-table">
+                <thead>
+                  <tr>
+                    <th>Query</th>
+                    <th>SQL</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats?.recentQueries?.map((q, i) => (
+                    <tr key={i}>
+                      <td>{q.naturalLanguageQuery}</td>
+                      <td><code style={{ color: 'var(--accent2)', fontSize: 11 }}>{q.generatedSQL}</code></td>
+                      <td style={{ color: 'var(--text2)', whiteSpace: 'nowrap' }}>
+                        {new Date(q.createdAt).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -84,6 +215,8 @@ function MainApp({ user, onLogout }) {
   const [history, setHistory] = useState([])
   const [showHistory, setShowHistory] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [viewMode, setViewMode] = useState('table')
+  const [showAdmin, setShowAdmin] = useState(false)
 
   const token = localStorage.getItem('token')
 
@@ -105,6 +238,7 @@ function MainApp({ user, onLogout }) {
     setError('')
     setResult(null)
     setLoading(true)
+    setViewMode('table')
     try {
       const res = await axios.post(`${API}/api/generate-sql`,
         { query: query.trim() },
@@ -125,6 +259,36 @@ function MainApp({ user, onLogout }) {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const exportCSV = () => {
+    if (!result?.queryResults?.rows?.length) return
+    const { columns, rows } = result.queryResults
+    const csv = [
+      columns.join(','),
+      ...rows.map(row => columns.map(col => `"${row[col]}"`).join(','))
+    ].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'query_results.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const getChartData = () => {
+    if (!result?.queryResults?.rows?.length) return []
+    const { columns, rows } = result.queryResults
+    const numericCol = columns.find(col =>
+      rows.every(row => !isNaN(row[col]) && row[col] !== '')
+    )
+    const labelCol = columns.find(col => col !== numericCol && col !== 'id')
+    if (!numericCol || !labelCol) return []
+    return rows.slice(0, 10).map(row => ({
+      name: String(row[labelCol]),
+      value: Number(row[numericCol])
+    }))
+  }
+
   const loadFromHistory = (item) => {
     setQuery(item.naturalLanguageQuery)
     setResult({
@@ -135,6 +299,13 @@ function MainApp({ user, onLogout }) {
     setShowHistory(false)
   }
 
+  if (showAdmin) {
+    return <AdminDashboard token={token} onBack={() => setShowAdmin(false)} />
+  }
+
+  const chartData = getChartData()
+  const hasChart = chartData.length > 0
+
   return (
     <div className="app-layout">
       {/* Sidebar */}
@@ -144,16 +315,12 @@ function MainApp({ user, onLogout }) {
           <button className="close-btn" onClick={() => setShowHistory(false)}>✕</button>
         </div>
         <div className="history-list">
-          {history.length === 0 && (
-            <p className="empty-history">No queries yet</p>
-          )}
+          {history.length === 0 && <p className="empty-history">No queries yet</p>}
           {history.map((item, i) => (
             <div key={i} className="history-item" onClick={() => loadFromHistory(item)}>
               <p className="history-nl">{item.naturalLanguageQuery}</p>
               <code className="history-sql">{item.generatedSQL}</code>
-              <span className="history-time">
-                {new Date(item.createdAt).toLocaleDateString()}
-              </span>
+              <span className="history-time">{new Date(item.createdAt).toLocaleDateString()}</span>
             </div>
           ))}
         </div>
@@ -168,9 +335,8 @@ function MainApp({ user, onLogout }) {
             <span className="logo-text">QueryGen<span className="logo-ai">AI</span></span>
           </div>
           <div className="header-right">
-            <button className="btn-ghost" onClick={() => setShowHistory(!showHistory)}>
-              ⏱ History
-            </button>
+            <button className="btn-ghost" onClick={() => setShowAdmin(true)}>⚙ Admin</button>
+            <button className="btn-ghost" onClick={() => setShowHistory(!showHistory)}>⏱ History</button>
             <span className="user-badge">{user.name}</span>
             <button className="btn-ghost" onClick={onLogout}>Logout</button>
           </div>
@@ -203,75 +369,123 @@ function MainApp({ user, onLogout }) {
               {loading ? <span className="spinner" /> : '⚡ Generate'}
             </button>
           </div>
-
-          {/* Example queries */}
           <div className="examples">
             {['Show all users from Delhi', 'Find users aged 25', 'List users named Alice'].map((ex) => (
-              <button key={ex} className="example-chip" onClick={() => setQuery(ex)}>
-                {ex}
-              </button>
+              <button key={ex} className="example-chip" onClick={() => setQuery(ex)}>{ex}</button>
             ))}
           </div>
         </div>
 
+        {/* Loading Skeleton */}
+        {loading && <SkeletonLoader />}
+
         {/* Error */}
-        {error && (
+        {error && !loading && (
           <div className="result-card error-card">
             <span>⚠ {error}</span>
           </div>
         )}
 
         {/* Result */}
-        {result && (
+        {result && !loading && (
           <div className="result-card">
             <div className="result-header">
               <span className="result-label">✦ Generated SQL</span>
-              <button className="btn-copy" onClick={copySQL}>
-                {copied ? '✓ Copied' : 'Copy'}
-              </button>
+              <div className="result-actions">
+                {result.queryResults?.count > 0 && (
+                  <button className="btn-export" onClick={exportCSV}>↓ CSV</button>
+                )}
+                <button className={`btn-copy ${copied ? 'copied' : ''}`} onClick={copySQL}>
+                  {copied ? '✓ Copied' : 'Copy'}
+                </button>
+              </div>
             </div>
-            <pre className="sql-output">
-              {result.queryResults && result.queryResults.count > 0 && (
-  <div className="meta-row">
-    <span className="meta-label">📊 Results — {result.queryResults.count} rows</span>
-    <div className="results-table-wrap">
-      <table className="results-table">
-        <thead>
-          <tr>
-            {result.queryResults.columns.map((col) => (
-              <th key={col}>{col}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {result.queryResults.rows.map((row, i) => (
-            <tr key={i}>
-              {result.queryResults.columns.map((col) => (
-                <td key={col}>{row[col]}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-)}
 
-{result.queryResults?.error && (
-  <div className="meta-row">
-    <span className="meta-label" style={{color: 'var(--error)'}}>⚠ SQL Error</span>
-    <p style={{color: 'var(--error)', fontSize: '13px'}}>{result.queryResults.error}</p>
-  </div>
-)}
-{result.generatedSQL}</pre>
+            {result.autoFixed && (
+              <div className="auto-fixed-badge">⚡ Auto-fixed by AI</div>
+            )}
+
+            <SyntaxHighlighter
+              language="sql"
+              style={atomOneDark}
+              customStyle={{
+                borderRadius: 12,
+                padding: '22px',
+                fontSize: 14,
+                marginBottom: 24,
+                background: 'var(--bg)',
+                border: '1px solid var(--border)'
+              }}
+            >
+              {result.generatedSQL}
+            </SyntaxHighlighter>
+
+            {result.queryResults?.count > 0 && (
+              <div className="meta-row">
+                <span className="meta-label">📊 Results — {result.queryResults.count} rows</span>
+
+                {hasChart && (
+                  <div className="view-toggle">
+                    <button className={viewMode === 'table' ? 'active' : ''} onClick={() => setViewMode('table')}>
+                      ▦ Table
+                    </button>
+                    <button className={viewMode === 'chart' ? 'active' : ''} onClick={() => setViewMode('chart')}>
+                      ▮ Chart
+                    </button>
+                  </div>
+                )}
+
+                {viewMode === 'table' && (
+                  <div className="results-table-wrap">
+                    <table className="results-table">
+                      <thead>
+                        <tr>{result.queryResults.columns.map(col => <th key={col}>{col}</th>)}</tr>
+                      </thead>
+                      <tbody>
+                        {result.queryResults.rows.map((row, i) => (
+                          <tr key={i}>
+                            {result.queryResults.columns.map(col => <td key={col}>{row[col]}</td>)}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {viewMode === 'chart' && hasChart && (
+                  <div className="chart-wrap">
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={chartData}>
+                        <XAxis dataKey="name" stroke="#7878aa" fontSize={12} />
+                        <YAxis stroke="#7878aa" fontSize={12} />
+                        <Tooltip
+                          contentStyle={{ background: '#0f0f1a', border: '1px solid #252540', borderRadius: 8 }}
+                          labelStyle={{ color: '#e8e8f5' }}
+                        />
+                        <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                          {chartData.map((_, i) => (
+                            <Cell key={i} fill={i % 2 === 0 ? '#6c63ff' : '#63ffda'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {result.queryResults?.error && (
+              <div className="meta-row">
+                <span className="meta-label" style={{ color: 'var(--error)' }}>⚠ SQL Error</span>
+                <p style={{ color: 'var(--error)', fontSize: 13 }}>{result.queryResults.error}</p>
+              </div>
+            )}
 
             {result.keywords?.length > 0 && (
               <div className="meta-row">
                 <span className="meta-label">Keywords</span>
                 <div className="tags">
-                  {result.keywords.map((k) => (
-                    <span key={k} className="tag">{k}</span>
-                  ))}
+                  {result.keywords.map(k => <span key={k} className="tag">{k}</span>)}
                 </div>
               </div>
             )}
@@ -309,7 +523,6 @@ export default function App() {
   })
 
   const handleLogin = (u) => setUser(u)
-
   const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
