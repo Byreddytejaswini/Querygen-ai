@@ -57,6 +57,7 @@ INSTALLATION & SETUP
 1. Clone the Repository
 
 git clone https://github.com/your-username/QueryGenAI.git
+
 cd QueryGenAI
 
 --------------------------------------------------
@@ -64,6 +65,7 @@ cd QueryGenAI
 2. Install Frontend Dependencies
 
 cd frontend
+
 npm install
 
 --------------------------------------------------
@@ -71,6 +73,7 @@ npm install
 3. Install Backend Dependencies
 
 cd ../backend
+
 npm install
 
 --------------------------------------------------
@@ -78,6 +81,7 @@ npm install
 4. Install AI Service Dependencies
 
 cd ../ai-service
+
 pip install -r requirements.txt
 
 --------------------------------------------------
@@ -87,6 +91,7 @@ RUNNING THE PROJECT
 Start Frontend
 
 cd frontend
+
 npm start
 
 --------------------------------------------------
@@ -94,6 +99,7 @@ npm start
 Start Backend
 
 cd backend
+
 npm run dev
 
 --------------------------------------------------
@@ -101,6 +107,7 @@ npm run dev
 Start AI Service
 
 cd ai-service
+
 uvicorn main:app --reload
 
 --------------------------------------------------
@@ -128,9 +135,13 @@ SELECT * FROM users WHERE city = 'Delhi' AND age > 25;
 FUTURE ENHANCEMENTS
 
 • Support for MySQL and PostgreSQL
+
 • Voice-based query input
+
 • Advanced analytics dashboard
+
 • Improved query optimization
+
 • Cloud deployment support
 
 --------------------------------------------------
@@ -138,7 +149,9 @@ FUTURE ENHANCEMENTS
 TEAM MEMBERS
 
 • P. Nikhitha
+
 • S. Sahithi
+
 • B. Tejaswini
 
 --------------------------------------------------
@@ -146,7 +159,11 @@ TEAM MEMBERS
 REFERENCES
 
 • React Documentation – https://react.dev
+
 • Node.js Documentation – https://nodejs.org
+
 • FastAPI Documentation – https://fastapi.tiangolo.com
+
 • SQLite Documentation – https://www.sqlite.org/docs.html
+
 • Groq API Documentation – https://console.groq.com/docs
